@@ -687,6 +687,7 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
 }
 
 export default function AdminPage() {
+  const [session, setSession] = useState<any>(null);
   const { data: orders, isLoading, error } = useRealTimeOrders();
   const { data: historicalOrders, isLoading: historicalLoading, error: historicalError } = useHistoricalOrders();
   const queryClient = useQueryClient();
@@ -706,12 +707,35 @@ export default function AdminPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
 
+  // Check authentication on component mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = "/login"; // redirect if not logged in
+      } else {
+        setSession(data.session);
+      }
+    });
+  }, []);
+
   // Request notification permission on component mount
   useEffect(() => {
     if (Notification.permission === 'default') {
       Notification.requestPermission();
     }
   }, []);
+
+  // Show loading screen while checking authentication
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleActionClick = (orderId: number, action: 'completed' | 'cancelled', orderName: string) => {
     setPendingAction({ orderId, action, orderName });
