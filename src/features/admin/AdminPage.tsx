@@ -745,6 +745,8 @@ function AdminPage() {
     orderName: string;
   } | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
+  const [isTakingOrders, setIsTakingOrders] = useState(true);
+  const [updatingOrderStatus, setUpdatingOrderStatus] = useState(false);
   
   // Pagination state for historical orders
   const [currentPage, setCurrentPage] = useState(1);
@@ -782,6 +784,29 @@ function AdminPage() {
       });
     }
   }, []);
+
+  // Toggle order acceptance status
+  const toggleOrderStatus = async () => {
+    setUpdatingOrderStatus(true);
+    try {
+      const newStatus = !isTakingOrders;
+      // Store in localStorage for now (you can move this to a database table later)
+      localStorage.setItem('besos_taking_orders', newStatus.toString());
+      setIsTakingOrders(newStatus);
+      
+      // Optional: You can also store this in a Supabase table for persistence across devices
+      // const { error } = await supabase
+      //   .from('settings')
+      //   .upsert({ key: 'taking_orders', value: newStatus });
+      // if (error) throw error;
+      
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status');
+    } finally {
+      setUpdatingOrderStatus(false);
+    }
+  };
 
   // Show loading screen while checking authentication
   if (!session && !authError) {
@@ -1166,6 +1191,27 @@ function AdminPage() {
               {activeTab === 'current' ? 'Manage coffee orders in real-time' : 'View past completed and cancelled orders'}
             </p>
           </div>
+          
+          {/* Order Status Toggle */}
+          <div className="flex items-center gap-3 mb-4 sm:mb-0">
+            <span className="text-sm font-medium text-gray-700">
+              {isTakingOrders ? 'Taking Orders' : 'Not Taking Orders'}
+            </span>
+            <button
+              onClick={toggleOrderStatus}
+              disabled={updatingOrderStatus}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                isTakingOrders ? 'bg-green-600' : 'bg-gray-200'
+              } ${updatingOrderStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isTakingOrders ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
             <button
               onClick={() => {

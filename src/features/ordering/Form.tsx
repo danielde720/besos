@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { supabase } from '../../lib/supabaseClient'
 import type { OrderItem, OrderSummary as OrderSummaryType } from './types.ts'
+import OrderClosedMessage from './OrderClosedMessage'
 
 // Export constants for reuse in admin
 export const MENU_CATEGORIES = {
@@ -65,6 +66,10 @@ export const EXTRA_PRICES = {
 }
 
 export default function Example() {
+  // Order acceptance status
+  const [isTakingOrders, setIsTakingOrders] = useState(true);
+  const [checkingOrderStatus, setCheckingOrderStatus] = useState(true);
+  
   const [selectedMenu, setSelectedMenu] = useState<string | null>(null)
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
@@ -106,6 +111,24 @@ export default function Example() {
     milk: '',
     quantity: ''
   })
+
+  // Check order acceptance status on component mount
+  useEffect(() => {
+    const checkOrderStatus = () => {
+      const takingOrders = localStorage.getItem('besos_taking_orders');
+      if (takingOrders !== null) {
+        setIsTakingOrders(takingOrders === 'true');
+      }
+      setCheckingOrderStatus(false);
+    };
+    
+    checkOrderStatus();
+    
+    // Check every 30 seconds for status changes
+    const interval = setInterval(checkOrderStatus, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Validation functions
   const validateField = (field: string, value: string) => {
@@ -523,6 +546,24 @@ export default function Example() {
   }
 
   return (
+    <>
+      {/* Show loading while checking order status */}
+      {checkingOrderStatus && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking order status...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Show closed message if not taking orders */}
+      {!checkingOrderStatus && !isTakingOrders && (
+        <OrderClosedMessage />
+      )}
+      
+      {/* Show normal form if taking orders */}
+      {!checkingOrderStatus && isTakingOrders && (
     <form onSubmit={handleSubmit}>
       <div className="space-y-12">
         {/* Customer Information */}
@@ -978,5 +1019,7 @@ export default function Example() {
         </div>
       )}
     </form>
+      )}
+    </>
   )
 }
