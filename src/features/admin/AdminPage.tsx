@@ -770,8 +770,15 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      // Invalidate historical orders query to refresh the history tab
+      // Invalidate both queries to ensure immediate UI updates
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["historical-orders"] });
+      
+      // Force a refetch as a fallback in case real-time doesn't work
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["orders"] });
+        queryClient.refetchQueries({ queryKey: ["historical-orders"] });
+      }, 100);
       
       // Clear local storage if this order matches the stored confirmation
       const storedOrder = localStorage.getItem('besos_order_confirmation')
@@ -781,8 +788,8 @@ export default function AdminPage() {
           if (parsedOrder.id === pendingAction.orderId) {
             localStorage.removeItem('besos_order_confirmation')
             console.log('Cleared local storage for completed/cancelled order')
-      }
-    } catch (error) {
+          }
+        } catch (error) {
           console.error('Error checking stored order:', error)
         }
       }
@@ -825,6 +832,12 @@ export default function AdminPage() {
       // Invalidate both queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["historical-orders"] });
+      
+      // Force a refetch as a fallback in case real-time doesn't work
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["orders"] });
+        queryClient.refetchQueries({ queryKey: ["historical-orders"] });
+      }, 100);
       
       // Clear local storage if this order matches the stored confirmation and status changed
       const storedOrder = localStorage.getItem('besos_order_confirmation')

@@ -8,7 +8,7 @@ import type { OrderItem, OrderSummary as OrderSummaryType } from './types.ts'
 // Export constants for reuse in admin
 export const MENU_CATEGORIES = {
   'regular': {
-    name: 'Regular Menu',
+    name: 'Regular Menu (Menú Regular)',
     coffees: [
       'Cafe de Olla Latte',
       'Cinnamon Crunch Latte',
@@ -22,7 +22,7 @@ export const MENU_CATEGORIES = {
     ]
   },
   'fall': {
-    name: 'Fall Menu',
+    name: 'Fall Menu (Menú de Otoño)',
     coffees: [
       'Arroz Con Leche Latte',
       'Churro Jack-O-Latte',
@@ -31,7 +31,7 @@ export const MENU_CATEGORIES = {
     ]
   },
   'spooky': {
-    name: 'Spooky Menu',
+    name: 'Spooky Menu (Menú Espeluznante)',
     coffees: [
       'Haunted Oreo Mazapan',
       'Bloody Besos',
@@ -40,16 +40,16 @@ export const MENU_CATEGORIES = {
     ]
   },
   'drea': {
-    name: 'Drea\'s Secret Menu',
+    name: 'Drea\'s Secret Menu (Menú Secreto de Drea)',
     coffees: [
-      'Blvd latte',
-      'A Town Latte'
+      'Blvd latte(Brown Sugar Shaken Expresso)',
+      'A Town Latte(Caramel Latte)'
     ]
   }
 }
 
 export const SIZE_OPTIONS = [ 'Regular (16oz)', 'Large (24oz)']
-export const MILK_OPTIONS = ['Whole Milk', 'Oat Milk', 'Almond Milk', 'Soy Milk', 'Coconut Milk', 'No Milk']
+export const MILK_OPTIONS = ['Whole Milk', 'Oat Milk', 'Almond Milk', 'Coconut Milk']
 export const EXTRA_OPTIONS = [ 'Hot', 'Iced' ]
 
 // Pricing
@@ -527,15 +527,15 @@ export default function Example() {
       <div className="space-y-12">
         {/* Customer Information */}
         <div className="pb-12">
-          <h2 className="text-base/7 font-semibold text-gray-900 dark:text-gray-800">Customer Information</h2>
+          <h2 className="text-base/7 font-semibold text-gray-900 dark:text-gray-800">Customer Information (Información del Cliente)</h2>
           <p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-600">
-            Please provide your contact information for the order.
+            Please provide your contact information for the order. (Por favor proporcione su información de contacto para el pedido.)
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
             <div className="sm:col-span-3">
               <label htmlFor="first-name" className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                First name
+                First name (Nombre)
               </label>
               <div className="mt-2">
                 <input
@@ -560,7 +560,7 @@ export default function Example() {
 
             <div className="sm:col-span-3">
               <label htmlFor="last-name" className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                Last name
+                Last name (Apellido)
               </label>
               <div className="mt-2">
                 <input
@@ -585,7 +585,7 @@ export default function Example() {
 
             <div className="sm:col-span-3">
               <label htmlFor="phone" className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                Phone number
+                Phone number (Número de teléfono)
               </label>
               <div className="mt-2">
                 <input
@@ -672,7 +672,7 @@ export default function Example() {
                 {/* Size Selection */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Size
+                    Size (Tamaño)
               </label>
                   <div className="mt-2 grid grid-cols-1">
                     <select 
@@ -702,7 +702,7 @@ export default function Example() {
                 {/* Milk Selection */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Milk Type
+                    Milk Type (Tipo de Leche)
               </label>
                   <div className="mt-2 grid grid-cols-1">
                     <select 
@@ -731,7 +731,7 @@ export default function Example() {
                 {/* Extras */}
             <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Extras
+                    Extras (Extras)
               </label>
                   <div className="mt-2 space-y-2">
                     {/* Extra Shot with Plus Icon */}
@@ -809,7 +809,7 @@ export default function Example() {
                 {/* Quantity */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Quantity
+                    Quantity (Cantidad)
                     </label>
                   <div className="mt-2">
                     <input
@@ -835,14 +835,14 @@ export default function Example() {
                 {/* Special Instructions */}
                 <div className="sm:col-span-4">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Special Instructions
+                    Special Instructions (Instrucciones Especiales)
                   </label>
                   <div className="mt-2">
                     <textarea
                       rows={2}
                       value={currentCoffee.notes}
                       onChange={(e) => updateCurrentCoffee('notes', e.target.value)}
-                      placeholder="Any special requests for this coffee..."
+                      placeholder="Any special requests for this coffee... (Cualquier solicitud especial para este café...)"
                       className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white dark:text-gray-800 dark:outline-gray-300 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                     />
                   </div>
@@ -852,7 +852,7 @@ export default function Example() {
               {/* Price Display and Add Coffee Button */}
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-lg font-semibold text-gray-900 dark:text-gray-800">
-                  Total: ${currentCoffee.size ? calculateCurrentPrice().toFixed(2) : '0.00'}
+                  Total: (Total:) ${currentCoffee.size ? calculateCurrentPrice().toFixed(2) : '0.00'}
                 </div>
                 <button
                   type="button"
@@ -860,7 +860,7 @@ export default function Example() {
                   className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:focus-visible:outline-indigo-500"
                 >
                   <PlusIcon className="size-4" />
-                  Add Coffee
+                  Add Coffee (Agregar Café)
                 </button>
               </div>
             </div>
@@ -878,7 +878,7 @@ export default function Example() {
         {/* Order Summary - Beautiful styled summary */}
         {selectedMenu && orderItems.length > 0 && (
           <div className="pb-12">
-            <h2 className="text-base/7 font-semibold text-gray-900 dark:text-gray-800 mb-6">Order Summary</h2>
+            <h2 className="text-base/7 font-semibold text-gray-900 dark:text-gray-800 mb-6">Order Summary (Resumen del Pedido)</h2>
             <div className="rounded-lg border border-gray-200 p-6 dark:border-gray-300">
               <div className="space-y-4">
                 {orderItems.map((item) => (
@@ -907,7 +907,7 @@ export default function Example() {
                       <button
                         onClick={() => removeItem(item.id)}
                         className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Remove item"
+                        title="Remove item (Eliminar artículo)"
                       >
                         <XMarkIcon className="w-4 h-4" />
                       </button>
@@ -924,7 +924,7 @@ export default function Example() {
                   
                   {/* Time Picker */}
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-300">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-800 mb-3">Select Pickup Time *</h3>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-800 mb-3">Select Pickup Time * (Seleccionar Hora de Recogida *)</h3>
                     <DatePicker
                       selected={selectedDateTime}
                       onChange={(date: Date | null) => {
@@ -935,16 +935,21 @@ export default function Example() {
                       timeIntervals={10}
                       timeFormat="h:mm aa"
                       dateFormat="MMMM d, yyyy h:mm aa"
+                      minTime={new Date(new Date().setHours(7, 0, 0, 0))}
+                      maxTime={new Date(new Date().setHours(17, 0, 0, 0))}
                       className={`w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white dark:text-gray-800 dark:outline-gray-300 dark:focus:outline-indigo-500 ${
                         validationErrors.pickupTime ? 'border-red-500 outline-red-500' : ''
                       }`}
-                      placeholderText="Select pickup date and time *"
+                      placeholderText="Select pickup date and time * (7am-5pm only)"
                       isClearable={false}
                       required
                     />
                     {validationErrors.pickupTime && (
                       <p className="mt-1 text-sm text-red-600">{validationErrors.pickupTime}</p>
                     )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      ⏰ Pickup times are available from 7:00 AM to 5:00 PM (Horas de recogida disponibles de 7:00 AM a 5:00 PM)
+                    </p>
                 </div>
                 </div>
                 </div>
@@ -960,7 +965,7 @@ export default function Example() {
             type="submit"
             className="rounded-md bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:focus-visible:outline-indigo-500"
           >
-            Submit Order
+            Submit Order (Enviar Pedido)
           </button>
           
           {/* Mobile-friendly error summary */}

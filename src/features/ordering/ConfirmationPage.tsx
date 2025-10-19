@@ -8,6 +8,7 @@ export default function ConfirmationPage() {
   const [isNotifying, setIsNotifying] = useState(false)
   const [notificationSent, setNotificationSent] = useState(false)
   const [customerAlreadyArrived, setCustomerAlreadyArrived] = useState(false)
+  const [orderCompleted, setOrderCompleted] = useState(false)
 
   useEffect(() => {
     // Get order data from local storage
@@ -21,12 +22,41 @@ export default function ConfirmationPage() {
         if (parsedOrder.id) {
           checkCustomerArrivalStatus(parsedOrder.id)
         }
+        
+        // Check if order has been completed or cancelled
+        if (parsedOrder.id) {
+          checkOrderStatus(parsedOrder.id)
+        }
       } catch (error) {
         console.error('Error parsing stored order:', error)
       }
     }
     setIsLoading(false)
   }, [])
+
+  const checkOrderStatus = async (orderId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .single()
+
+      if (error) throw error
+
+      // If order is completed or cancelled, clear localStorage and redirect
+      if (data?.status === 'completed' || data?.status === 'cancelled') {
+        setOrderCompleted(true)
+        localStorage.removeItem('besos_order_confirmation')
+        // Redirect to form after a short delay
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 3000)
+      }
+    } catch (error) {
+      console.error('Error checking order status:', error)
+    }
+  }
 
   const checkCustomerArrivalStatus = async (orderId: number) => {
     try {
@@ -99,6 +129,28 @@ export default function ConfirmationPage() {
     )
   }
 
+  if (orderCompleted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-200">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Order Complete!
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Your order has been completed. Thank you for choosing Besos Coffee!
+          </p>
+          <p className="text-sm text-gray-500 mb-4">
+            Redirecting you to place a new order...
+          </p>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
+
   if (!orderData) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -130,11 +182,11 @@ export default function ConfirmationPage() {
 
         {/* Success Message */}
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Order Confirmed! 🎉
+          Order Confirmed! 🎉 (¡Pedido Confirmado! 🎉)
         </h1>
         
         <p className="text-lg text-gray-600 mb-8">
-          Your coffee order has been successfully submitted and is being prepared.
+          Your coffee order has been successfully submitted and is being prepared. (Su pedido de café ha sido enviado exitosamente y está siendo preparado.)
         </p>
 
         {/* Order Details */}
@@ -206,7 +258,7 @@ export default function ConfirmationPage() {
             💳 Payment Instructions
           </h2>
           <p className="text-gray-700 mb-2">
-            Please have proof of payement at the time of pickup or have your payment ready when you arrive for pickup. We accept cash, apple cash, cash app, venmo and zelle. 
+            Please have proof of payment sent and screenshot ready at the time of pickup when in drive thru lane. We accept Zelle/Apple Pay (714)749-6701 - CashApp/Venmo @besoscafe or perferably cash. (Por favor tenga prueba de pago enviada y captura de pantalla listo al momento de recoger cuando esté en el carril de autoservicio. Aceptamos Zelle/Apple Pay (714)749-6701 - CashApp/Venmo @besoscafe o preferiblemente efectivo.)
           </p>
         </div>
 
@@ -240,10 +292,10 @@ export default function ConfirmationPage() {
               </p>
               <p className="text-sm text-gray-700">
               Once you get there, go into the alley beside the building and make a left.
-              You'll see our pickup area in front of the garage, under a black tent — that's where we'll meet you.
+              You'll see our pickup area in front of the garage, under a black tent — that's where we'll meet you. (Una vez que llegues, ve por el callejón al lado del edificio y gira a la izquierda. Verás nuestra área de recogida frente al garaje, bajo una carpa negra — ahí es donde nos encontraremos.)
               </p>
               <p className="text-sm text-gray-700 mt-2 font-medium">
-              📍 When you arrive at the pickup area, click the button below to let us know you're here!
+              📍 When you arrive at the pickup area, click the button below to let us know you're here! (📍 Cuando llegues al área de recogida, haz clic en el botón de abajo para avisarnos que estás aquí!)
               </p>
             </div>
             
@@ -284,7 +336,7 @@ export default function ConfirmationPage() {
 
         {/* Additional Info */}
         <div className="text-sm text-gray-500 space-y-2">
-          <p>• If you cant make it or need to modify your order please call us so we can cancel or modify your order. call us at (714) 208-4108 </p>
+          <p>• If you cant make it or need to modify your order please DM us on instagram so we can cancel or modify your order. DM us @ besos.cafe (• Si no puedes venir o necesitas modificar tu pedido, por favor envíanos un DM en Instagram para que podamos cancelar o modificar tu pedido. Envíanos un DM @ besos.cafe)</p>
         </div>
       </div>
     </div>

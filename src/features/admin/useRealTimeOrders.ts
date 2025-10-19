@@ -46,6 +46,8 @@ export const useRealTimeOrders = () => {
 
   // 2️⃣ Realtime subscription
   useEffect(() => {
+    console.log("Setting up real-time subscription for orders...");
+    
     const channel = supabase
       .channel("orders-realtime")
       .on(
@@ -55,43 +57,55 @@ export const useRealTimeOrders = () => {
           console.log("Realtime event:", payload);
 
           queryClient.setQueryData(["orders"], (old: any[] = []) => {
+            console.log("Processing real-time update:", payload.eventType, (payload.new as any)?.status);
+            
             if (payload.eventType === "INSERT") {
               // add new order to the list (only if it's pending)
-              if (payload.new.status === "pending") {
+              if ((payload.new as any)?.status === "pending") {
+                console.log("Adding new pending order:", (payload.new as any)?.id);
                 return [payload.new, ...old];
               }
               return old;
             }
             if (payload.eventType === "UPDATE") {
+              console.log("Order status changed:", (payload.new as any)?.status);
+              
               // if order is no longer pending, remove it from current orders
-              if (payload.new.status !== "pending") {
-                return old.filter((order) => order.id !== payload.new.id);
+              if ((payload.new as any)?.status !== "pending") {
+                console.log("Removing non-pending order:", (payload.new as any)?.id);
+                return old.filter((order) => order.id !== (payload.new as any)?.id);
               }
               
               // Check if customer just arrived (customer_arrived changed from false to true)
-              const oldOrder = old.find(order => order.id === payload.new.id);
-              if (oldOrder && !oldOrder.customer_arrived && payload.new.customer_arrived) {
+              const oldOrder = old.find(order => order.id === (payload.new as any)?.id);
+              if (oldOrder && !oldOrder.customer_arrived && (payload.new as any)?.customer_arrived) {
+                console.log("Customer arrived notification for order:", (payload.new as any)?.id);
                 // Play notification sound
                 playArrivalNotification();
               }
               
               // if order is still pending, update it
+              console.log("Updating pending order:", (payload.new as any)?.id);
               return old.map((order) =>
-                order.id === payload.new.id ? payload.new : order
+                order.id === (payload.new as any)?.id ? payload.new : order
               );
             }
             if (payload.eventType === "DELETE") {
+              console.log("Deleting order:", (payload.old as any)?.id);
               // remove cancelled/deleted order
-              return old.filter((order) => order.id !== payload.old.id);
+              return old.filter((order) => order.id !== (payload.old as any)?.id);
             }
             return old;
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Real-time subscription status:", status);
+      });
 
     // 3️⃣ Cleanup on unmount
     return () => {
+      console.log("Cleaning up real-time subscription...");
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
