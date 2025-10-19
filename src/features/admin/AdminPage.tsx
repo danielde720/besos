@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRealTimeOrders } from './useRealTimeOrders'
 import { useHistoricalOrders } from './useHistoricalOrders'
 import { supabase } from '../../lib/supabaseClient'
@@ -12,6 +12,48 @@ import {
   EXTRA_PRICES 
 } from '../ordering/Form'
 import { useQueryClient } from '@tanstack/react-query'
+
+// Simple Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('AdminPage Error:', error, errorInfo);
+  }
+
+  render() {
+    if ((this as any).state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="text-red-600 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+            <p className="text-gray-600 mb-4">Please refresh the page or try again later.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (this as any).props.children;
+  }
+}
 
 // Edit Order Form Component
 function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
@@ -686,8 +728,9 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
   );
 }
 
-export default function AdminPage() {
+function AdminPage() {
   const [session, setSession] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const { data: orders, isLoading, error } = useRealTimeOrders();
   const { data: historicalOrders, isLoading: historicalLoading, error: historicalError } = useHistoricalOrders();
   const queryClient = useQueryClient();
@@ -709,29 +752,67 @@ export default function AdminPage() {
 
   // Check authentication on component mount
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    console.log('AdminPage: Checking authentication...');
+    supabase.auth.getSession().then(({ data, error }) => {
+      console.log('AdminPage: Auth session result:', { data, error });
+      if (error) {
+        console.error('Auth session error:', error);
+        setAuthError(error.message);
+        return;
+      }
       if (!data.session) {
-        window.location.href = "/login"; // redirect if not logged in
+        console.log('AdminPage: No session, redirecting to login...');
+        // Use more mobile-friendly redirect
+        window.location.replace("/login");
       } else {
+        console.log('AdminPage: Session found, setting session...');
         setSession(data.session);
       }
+    }).catch((error) => {
+      console.error('Auth session catch error:', error);
+      setAuthError(error.message);
     });
   }, []);
 
-  // Request notification permission on component mount
+  // Request notification permission on component mount (with mobile compatibility check)
   useEffect(() => {
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch((error) => {
+        console.log('Notification permission denied or not supported:', error);
+      });
     }
   }, []);
 
   // Show loading screen while checking authentication
-  if (!session) {
+  if (!session && !authError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error screen if authentication failed
+  if (authError) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-600 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Error</h2>
+          <p className="text-gray-600 mb-4">{authError}</p>
+          <button 
+            onClick={() => window.location.replace("/login")}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Go to Login
+          </button>
         </div>
       </div>
     );
@@ -1076,42 +1157,42 @@ export default function AdminPage() {
   }
 
   return (
-    <div className={`${activeTab === 'history' ? 'w-full' : 'max-w-[1600px]'} mx-auto px-6 py-8`}>
-      <header className="mb-8">
-        <div className="flex justify-between items-start">
+    <div className={`${activeTab === 'history' ? 'w-full' : 'max-w-[1600px]'} mx-auto px-4 sm:px-6 py-4 sm:py-8`}>
+      <header className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Besos Dashboard</h1>
-            <p className="mt-1 text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Besos Dashboard</h1>
+            <p className="mt-1 text-sm sm:text-base text-gray-600">
               {activeTab === 'current' ? 'Manage coffee orders in real-time' : 'View past completed and cancelled orders'}
-        </p>
-      </div>
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            </p>
+          </div>
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
             <button
               onClick={() => {
                 setActiveTab('current');
                 setCurrentPage(1); // Reset pagination when switching tabs
               }}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'current'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Current Orders
-                      </button>
-                      <button
+            </button>
+            <button
               onClick={() => {
                 setActiveTab('history');
                 setCurrentPage(1); // Reset pagination when switching tabs
               }}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'history'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Order History
-                      </button>
+            </button>
           </div>
         </div>
       </header>
@@ -1121,7 +1202,7 @@ export default function AdminPage() {
         // Current Orders Tab
         <>
           {sortedOrders.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {sortedOrders.map((order) => (
             <div
               key={order.id}
@@ -1479,5 +1560,14 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Export with Error Boundary
+export default function AdminPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <AdminPage />
+    </ErrorBoundary>
   );
 }
