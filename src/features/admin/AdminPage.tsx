@@ -745,7 +745,11 @@ function AdminPage() {
     orderName: string;
   } | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
-  const [isTakingOrders, setIsTakingOrders] = useState(true);
+  const [isTakingOrders, setIsTakingOrders] = useState(() => {
+    // Initialize from localStorage, default to true if not set
+    const stored = localStorage.getItem('besos_taking_orders');
+    return stored !== null ? stored === 'true' : true;
+  });
   const [updatingOrderStatus, setUpdatingOrderStatus] = useState(false);
   
   // Pagination state for historical orders
