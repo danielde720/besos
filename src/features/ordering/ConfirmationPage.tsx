@@ -1,14 +1,12 @@
 import { CheckCircleIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function ConfirmationPage() {
+  const navigate = useNavigate()
   const [orderData, setOrderData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isNotifying, setIsNotifying] = useState(false)
-  const [notificationSent, setNotificationSent] = useState(false)
-  const [customerAlreadyArrived, setCustomerAlreadyArrived] = useState(false)
-  const [orderCompleted, setOrderCompleted] = useState(false)
 
   useEffect(() => {
     // Get order data from local storage
@@ -17,11 +15,6 @@ export default function ConfirmationPage() {
       try {
         const parsedOrder = JSON.parse(storedOrder)
         setOrderData(parsedOrder)
-        
-        // Check if customer has already arrived
-        if (parsedOrder.id) {
-          checkCustomerArrivalStatus(parsedOrder.id)
-        }
         
         // Check if order has been completed or cancelled
         if (parsedOrder.id) {
@@ -38,44 +31,34 @@ export default function ConfirmationPage() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('status')
+        .select('status, cancellation_reason')
         .eq('id', orderId)
         .single()
 
       if (error) throw error
 
-      // If order is completed or cancelled, clear localStorage and redirect
-      if (data?.status === 'completed' || data?.status === 'cancelled') {
-        setOrderCompleted(true)
-        localStorage.removeItem('besos_order_confirmation')
-        // Redirect to form after a short delay
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 3000)
+      // Route to appropriate page based on status
+      if (data?.status === 'completed') {
+        // Store order data for the completed page
+        localStorage.setItem('besos_order_completed', JSON.stringify({
+          orderId,
+          orderDetails: orderData
+        }))
+        navigate('/order-completed')
+      } else if (data?.status === 'cancelled') {
+        // Store order data for the cancelled page
+        localStorage.setItem('besos_order_cancelled', JSON.stringify({
+          orderId,
+          orderDetails: orderData,
+          cancellationReason: data.cancellation_reason
+        }))
+        navigate('/order-cancelled')
       }
     } catch (error) {
       console.error('Error checking order status:', error)
     }
   }
 
-  const checkCustomerArrivalStatus = async (orderId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('customer_arrived')
-        .eq('id', orderId)
-        .single()
-
-      if (error) throw error
-
-      if (data?.customer_arrived) {
-        setCustomerAlreadyArrived(true)
-        setNotificationSent(true)
-      }
-    } catch (error) {
-      console.error('Error checking arrival status:', error)
-    }
-  }
 
   const formatPickupTime = (pickupTime: string) => {
     const date = new Date(pickupTime)
@@ -90,33 +73,6 @@ export default function ConfirmationPage() {
     })
   }
 
-  const handleImHere = async () => {
-    if (!orderData?.id) return;
-    
-    setIsNotifying(true);
-    
-    try {
-      // Update the order in the database to mark customer as arrived
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          customer_arrived: true,
-          arrived_at: new Date().toISOString()
-        })
-        .eq('id', orderData.id);
-
-      if (error) throw error;
-
-      setNotificationSent(true);
-      setCustomerAlreadyArrived(true);
-      
-    } catch (error) {
-      console.error('Error notifying admin:', error);
-      alert('Failed to notify admin. Please try again.');
-    } finally {
-      setIsNotifying(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -129,27 +85,6 @@ export default function ConfirmationPage() {
     )
   }
 
-  if (orderCompleted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-200">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircleIcon className="w-8 h-8 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Order Complete!
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Your order has been completed. Thank you for choosing Besos Coffee!
-          </p>
-          <p className="text-sm text-gray-500 mb-4">
-            Redirecting you to place a new order...
-          </p>
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-        </div>
-      </div>
-    )
-  }
 
   if (!orderData) {
     return (
@@ -294,42 +229,6 @@ export default function ConfirmationPage() {
               Once you get there, go into the alley beside the building and make a left.
               You'll see our pickup area in front of the garage, under a black tent — that's where we'll meet you. (Una vez que llegues, ve por el callejón al lado del edificio y gira a la izquierda. Verás nuestra área de recogida frente al garaje, bajo una carpa negra — ahí es donde nos encontraremos.)
               </p>
-              <p className="text-sm text-gray-700 mt-2 font-medium">
-              📍 When you arrive at the pickup area, click the button below to let us know you're here! (📍 Cuando llegues al área de recogida, haz clic en el botón de abajo para avisarnos que estás aquí!)
-              </p>
-            </div>
-            
-            {/* I'm Here Button */}
-            <div className="mt-6 text-center">
-              {notificationSent || customerAlreadyArrived ? (
-                <div className="bg-green-100 border border-green-300 rounded-lg p-4">
-                  <div className="flex items-center justify-center">
-                    <CheckCircleIcon className="w-6 h-6 text-green-600 mr-2" />
-                    <p className="text-green-800 font-medium">
-                      ✅ We've been notified that you're here! Someone will be out shortly.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={handleImHere}
-                  disabled={isNotifying || customerAlreadyArrived}
-                  className={`px-8 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
-                    isNotifying || customerAlreadyArrived
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 hover:shadow-lg transform hover:scale-105'
-                  }`}
-                >
-                  {isNotifying ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Notifying...
-                    </div>
-                  ) : (
-                    '🚗 I\'m Here!'
-                  )}
-                </button>
-              )}
             </div>
           </div>
         </div>

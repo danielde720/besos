@@ -4,6 +4,9 @@ import Form from "./features/ordering/Form.tsx";
 import Admin from "./features/admin/AdminPage.tsx";
 import AdminLogin from "./features/admin/AdminLogin.tsx";
 import ConfirmationPage from "./features/ordering/ConfirmationPage.tsx";
+import OrderCompletedPage from "./features/ordering/OrderCompletedPage.tsx";
+import OrderCancelledPage from "./features/ordering/OrderCancelledPage.tsx";
+import OrderEditedPage from "./features/ordering/OrderEditedPage.tsx";
 
 export default function App() {
   return (
@@ -32,6 +35,9 @@ export default function App() {
               <ConfirmationPage />
             </div>
           } />
+          <Route path="/order-completed" element={<OrderCompletedPage />} />
+          <Route path="/order-cancelled" element={<OrderCancelledPage />} />
+          <Route path="/order-edited" element={<OrderEditedPage />} />
         </Routes>
       </div>
     </div>

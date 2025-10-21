@@ -3,33 +3,10 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabaseClient";
-import besoSound from "../../assets/beso.mp3";
 
 // This hook fetches and listens for changes in 'orders'
 export const useRealTimeOrders = () => {
   const queryClient = useQueryClient();
-
-  // Audio notification function
-  const playArrivalNotification = () => {
-    try {
-      // Simple custom sound notification
-      const audio = new Audio(besoSound); // Your custom sound file
-      audio.volume = 0.7; // Adjust volume (0.0 to 1.0)
-      audio.play().catch(error => {
-        console.error('Error playing notification sound:', error);
-      });
-      
-      // Also show browser notification if permission is granted
-      if (Notification.permission === 'granted') {
-        new Notification('Customer Arrived!', {
-          body: 'A customer has arrived for pickup',
-          icon: '/favicon.ico'
-        });
-      }
-    } catch (error) {
-      console.error('Error playing notification sound:', error);
-    }
-  };
 
   // 1️⃣ Base data fetching (React Query)
   const { data, isLoading, error } = useQuery({
@@ -56,6 +33,10 @@ export const useRealTimeOrders = () => {
         (payload) => {
           console.log("Realtime event:", payload);
 
+          // Invalidate and refetch the orders query to ensure we get the latest data
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+          // Also update the cache directly for immediate UI updates
           queryClient.setQueryData(["orders"], (old: any[] = []) => {
             console.log("Processing real-time update:", payload.eventType, (payload.new as any)?.status);
             
@@ -76,14 +57,6 @@ export const useRealTimeOrders = () => {
                 return old.filter((order) => order.id !== (payload.new as any)?.id);
               }
               
-              // Check if customer just arrived (customer_arrived changed from false to true)
-              const oldOrder = old.find(order => order.id === (payload.new as any)?.id);
-              if (oldOrder && !oldOrder.customer_arrived && (payload.new as any)?.customer_arrived) {
-                console.log("Customer arrived notification for order:", (payload.new as any)?.id);
-                // Play notification sound
-                playArrivalNotification();
-              }
-              
               // if order is still pending, update it
               console.log("Updating pending order:", (payload.new as any)?.id);
               return old.map((order) =>
@@ -101,6 +74,11 @@ export const useRealTimeOrders = () => {
       )
       .subscribe((status) => {
         console.log("Real-time subscription status:", status);
+        if (status === 'SUBSCRIBED') {
+          console.log("✅ Successfully subscribed to orders real-time updates");
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error("❌ Error subscribing to orders real-time updates");
+        }
       });
 
     // 3️⃣ Cleanup on unmount

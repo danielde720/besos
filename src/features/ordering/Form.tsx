@@ -70,6 +70,9 @@ export default function Example() {
   const [isTakingOrders, setIsTakingOrders] = useState(true);
   const [checkingOrderStatus, setCheckingOrderStatus] = useState(true);
   
+  // Booked time slots for availability checking
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
+  
   const [selectedMenu, setSelectedMenu] = useState<string | null>(null)
   const [customerInfo, setCustomerInfo] = useState({
     firstName: '',
@@ -129,6 +132,64 @@ export default function Example() {
     
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch booked time slots
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('pickup_time')
+          .eq('status', 'pending')
+          .not('pickup_time', 'is', null)
+        
+        if (error) {
+          console.error('❌ Error fetching booked slots:', error);
+          return;
+        }
+        
+        // Convert pickup times to slot keys (YYYY-MM-DD HH:MM format)
+        const slots = new Set<string>();
+        data?.forEach(order => {
+          if (order.pickup_time) {
+            const date = new Date(order.pickup_time);
+            // Normalize to 5-minute intervals
+            const minutes = date.getMinutes();
+            const normalizedMinutes = Math.floor(minutes / 5) * 5;
+            date.setMinutes(normalizedMinutes, 0, 0);
+            
+            const slotKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            slots.add(slotKey);
+          }
+        });
+        
+        console.log('📊 Loaded booked slots:', Array.from(slots));
+        setBookedSlots(slots);
+      } catch (error) {
+        console.error('Error fetching booked slots:', error);
+      }
+    };
+    
+    if (isTakingOrders) {
+      fetchBookedSlots();
+      // Refresh every 30 seconds
+      const interval = setInterval(fetchBookedSlots, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isTakingOrders]);
+
+  // Check if a time slot is available
+  const isSlotAvailable = (date: Date) => {
+    // Normalize to 5-minute intervals
+    const minutes = date.getMinutes();
+    const normalizedMinutes = Math.floor(minutes / 5) * 5;
+    const normalizedDate = new Date(date);
+    normalizedDate.setMinutes(normalizedMinutes, 0, 0);
+    
+    const slotKey = `${normalizedDate.getFullYear()}-${String(normalizedDate.getMonth() + 1).padStart(2, '0')}-${String(normalizedDate.getDate()).padStart(2, '0')} ${String(normalizedDate.getHours()).padStart(2, '0')}:${String(normalizedDate.getMinutes()).padStart(2, '0')}`;
+    
+    return !bookedSlots.has(slotKey);
+  };
 
   // Validation functions
   const validateField = (field: string, value: string) => {
@@ -969,27 +1030,55 @@ export default function Example() {
                     <DatePicker
                       selected={selectedDateTime}
                       onChange={(date: Date | null) => {
-                        setSelectedDateTime(date)
-                        updateValidationError('pickupTime', date ? 'selected' : '')
+                        if (date) {
+                          // Since filterTime already prevents unavailable slots, we can directly set the date
+                          setSelectedDateTime(date)
+                          updateValidationError('pickupTime', 'selected')
+                          console.log('✅ Time slot selected:', date.toLocaleString())
+                        } else {
+                          setSelectedDateTime(null)
+                          updateValidationError('pickupTime', '')
+                        }
                       }}
                       showTimeSelect
-                      timeIntervals={10}
+                      timeIntervals={5}
                       timeFormat="h:mm aa"
                       dateFormat="MMMM d, yyyy h:mm aa"
                       minTime={new Date(new Date().setHours(7, 0, 0, 0))}
                       maxTime={new Date(new Date().setHours(17, 0, 0, 0))}
+                      filterDate={(date) => {
+                        // Only allow today and future dates
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date >= today;
+                      }}
+                      filterTime={(time) => {
+                        const now = new Date();
+                        
+                        // First check if time is in the past
+                        if (time <= now) {
+                          return false;
+                        }
+                        
+                        // Then check slot availability
+                        return isSlotAvailable(time);
+                      }}
                       className={`w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white dark:text-gray-800 dark:outline-gray-300 dark:focus:outline-indigo-500 ${
                         validationErrors.pickupTime ? 'border-red-500 outline-red-500' : ''
                       }`}
-                      placeholderText="Select pickup date and time * (7am-5pm only)"
-                      isClearable={false}
+                      placeholderText="Select pickup date and time * (7am-5pm, 5-minute intervals)"
+                      isClearable={true}
                       required
                     />
                     {validationErrors.pickupTime && (
                       <p className="mt-1 text-sm text-red-600">{validationErrors.pickupTime}</p>
                     )}
                     <p className="mt-2 text-xs text-gray-500">
-                      ⏰ Pickup times are available from 7:00 AM to 5:00 PM (Horas de recogida disponibles de 7:00 AM a 5:00 PM)
+                      ⏰ Pickup times are available from 7:00 AM to 5:00 PM in 5-minute intervals (Horas de recogida disponibles de 7:00 AM a 5:00 PM en intervalos de 5 minutos)
+                      <br />
+                      📅 Booked time slots are automatically unavailable (Las franjas horarias reservadas no están disponibles automáticamente)
+                      <br />
+                      🚫 Past dates and times cannot be selected (No se pueden seleccionar fechas y horas pasadas)
                     </p>
                 </div>
                 </div>
