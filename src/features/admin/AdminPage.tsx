@@ -9,7 +9,8 @@ import {
   MILK_OPTIONS, 
   EXTRA_OPTIONS, 
   SIZE_PRICES, 
-  EXTRA_PRICES 
+  EXTRA_PRICES,
+  BAKERY_PRICES
 } from '../ordering/Form'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -90,6 +91,12 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
 
   // Calculate price for an item
   const calculateItemPrice = (item: any) => {
+    // Check if it's a bakery item
+    if (BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES]) {
+      return BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES];
+    }
+    
+    // Regular coffee pricing
     let price = SIZE_PRICES[item.size as keyof typeof SIZE_PRICES] || 0;
     
     // Add extra shot pricing
@@ -306,46 +313,48 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
                 </div>
               </div>
 
-              {/* Size and Milk Dropdowns */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                  <div className="relative">
-                    <select
-                      value={item.size || ''}
-                      onChange={(e) => updateItem(index, 'size', e.target.value)}
-                      className="w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select size</option>
-                      {SIZE_OPTIONS.map(size => (
-                        <option key={size} value={size}>{size}</option>
-                      ))}
-                    </select>
-                    <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              {/* Size and Milk Dropdowns - Only show for coffee items */}
+              {!BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES] && (
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                    <div className="relative">
+                      <select
+                        value={item.size || ''}
+                        onChange={(e) => updateItem(index, 'size', e.target.value)}
+                        className="w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select size</option>
+                        {SIZE_OPTIONS.map(size => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Milk</label>
+                    <div className="relative">
+                      <select
+                        value={item.milk || ''}
+                        onChange={(e) => updateItem(index, 'milk', e.target.value)}
+                        className="w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select milk</option>
+                        {MILK_OPTIONS.map(milk => (
+                          <option key={milk} value={milk}>{milk}</option>
+                        ))}
+                      </select>
+                      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Milk</label>
-                  <div className="relative">
-                    <select
-                      value={item.milk || ''}
-                      onChange={(e) => updateItem(index, 'milk', e.target.value)}
-                      className="w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select milk</option>
-                      {MILK_OPTIONS.map(milk => (
-                        <option key={milk} value={milk}>{milk}</option>
-                      ))}
-                    </select>
-                    <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Quantity and Price */}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Coffee Quantity</label>
                   <input
                     type="number"
                     min="1"
@@ -488,69 +497,71 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
             )}
           </div>
 
-          {/* Size and Milk Dropdowns */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-              <div className="relative">
-                <select
-                  value={newItem.size}
-                  onChange={(e) => {
-                    setNewItem({...newItem, size: e.target.value});
-                    if (newItemErrors.size) {
-                      setNewItemErrors({...newItemErrors, size: ''});
-                    }
-                  }}
-                  className={`w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border focus:outline-none focus:ring-2 ${
-                    newItemErrors.size 
-                      ? 'border-red-300 focus:ring-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500'
-                  }`}
-                >
-                  <option value="">Select size</option>
-                  {SIZE_OPTIONS.map(size => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
-                <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+          {/* Size and Milk Dropdowns - Only show for coffee items */}
+          {!BAKERY_PRICES[newItem.coffee_type as keyof typeof BAKERY_PRICES] && (
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                <div className="relative">
+                  <select
+                    value={newItem.size}
+                    onChange={(e) => {
+                      setNewItem({...newItem, size: e.target.value});
+                      if (newItemErrors.size) {
+                        setNewItemErrors({...newItemErrors, size: ''});
+                      }
+                    }}
+                    className={`w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border focus:outline-none focus:ring-2 ${
+                      newItemErrors.size 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                  >
+                    <option value="">Select size</option>
+                    {SIZE_OPTIONS.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                </div>
+                {newItemErrors.size && (
+                  <p className="text-red-500 text-xs mt-1">{newItemErrors.size}</p>
+                )}
               </div>
-              {newItemErrors.size && (
-                <p className="text-red-500 text-xs mt-1">{newItemErrors.size}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Milk</label>
-              <div className="relative">
-                <select
-                  value={newItem.milk}
-                  onChange={(e) => {
-                    setNewItem({...newItem, milk: e.target.value});
-                    if (newItemErrors.milk) {
-                      setNewItemErrors({...newItemErrors, milk: ''});
-                    }
-                  }}
-                  className={`w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border focus:outline-none focus:ring-2 ${
-                    newItemErrors.milk 
-                      ? 'border-red-300 focus:ring-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500'
-                  }`}
-                >
-                  <option value="">Select milk</option>
-                  {MILK_OPTIONS.map(milk => (
-                    <option key={milk} value={milk}>{milk}</option>
-                  ))}
-                </select>
-                <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Milk</label>
+                <div className="relative">
+                  <select
+                    value={newItem.milk}
+                    onChange={(e) => {
+                      setNewItem({...newItem, milk: e.target.value});
+                      if (newItemErrors.milk) {
+                        setNewItemErrors({...newItemErrors, milk: ''});
+                      }
+                    }}
+                    className={`w-full appearance-none rounded-md bg-white py-2 pr-8 pl-3 text-sm text-gray-900 border focus:outline-none focus:ring-2 ${
+                      newItemErrors.milk 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                  >
+                    <option value="">Select milk</option>
+                    {MILK_OPTIONS.map(milk => (
+                      <option key={milk} value={milk}>{milk}</option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                </div>
+                {newItemErrors.milk && (
+                  <p className="text-red-500 text-xs mt-1">{newItemErrors.milk}</p>
+                )}
               </div>
-              {newItemErrors.milk && (
-                <p className="text-red-500 text-xs mt-1">{newItemErrors.milk}</p>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Quantity */}
           <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Coffee Quantity (Cantidad de Café)</label>
             <input
               type="number"
               min="1"
@@ -558,6 +569,9 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
               onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 1})}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              How many of this coffee drink? (Bakery items are added separately above)
+            </p>
           </div>
 
           {/* Extras for New Item */}
@@ -647,6 +661,58 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
                   <span className="ml-2 text-sm text-gray-900">{extra}</span>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* Bakery Section */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Bakery (Panadería)</label>
+            <div className="space-y-2">
+              {/* Vanilla Mini Concha */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={(newItem.extras || []).some((extra: string) => extra.startsWith('Vanilla Mini Concha'))}
+                    onChange={() => {
+                      const currentExtras = newItem.extras || [];
+                      const hasVanilla = currentExtras.some((extra: string) => extra.startsWith('Vanilla Mini Concha'));
+                      if (hasVanilla) {
+                        removeExtraFromNewItem('Vanilla Mini Concha');
+                      } else {
+                        addExtraToNewItem('Vanilla Mini Concha');
+                      }
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-900">
+                    Vanilla Mini Concha (+$2)
+                  </span>
+                </label>
+              </div>
+              
+              {/* Chocolate Mini Concha */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={(newItem.extras || []).some((extra: string) => extra.startsWith('Chocolate Mini Concha'))}
+                    onChange={() => {
+                      const currentExtras = newItem.extras || [];
+                      const hasChocolate = currentExtras.some((extra: string) => extra.startsWith('Chocolate Mini Concha'));
+                      if (hasChocolate) {
+                        removeExtraFromNewItem('Chocolate Mini Concha');
+                      } else {
+                        addExtraToNewItem('Chocolate Mini Concha');
+                      }
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-900">
+                    Chocolate Mini Concha (+$2)
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1246,6 +1312,7 @@ function AdminPage() {
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
+              title="Order History (Last 2 Days)"
             >
               Order History
             </button>

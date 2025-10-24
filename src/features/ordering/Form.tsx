@@ -52,11 +52,17 @@ export const MENU_CATEGORIES = {
 export const SIZE_OPTIONS = [ 'Regular (16oz)', 'Large (24oz)']
 export const MILK_OPTIONS = ['Whole Milk', 'Oat Milk', 'Almond Milk', 'Coconut Milk']
 export const EXTRA_OPTIONS = [ 'Hot', 'Iced' ]
+export const BAKERY_OPTIONS = ['Vanilla Mini Concha', 'Chocolate Mini Concha']
 
 // Pricing
 export const SIZE_PRICES = {
   'Regular (16oz)': 7,
   'Large (24oz)': 9
+}
+
+export const BAKERY_PRICES = {
+  'Vanilla Mini Concha': 2,
+  'Chocolate Mini Concha': 2
 }
 
 export const EXTRA_PRICES = {
@@ -115,7 +121,7 @@ export default function Example() {
     quantity: ''
   })
 
-  // Check order acceptance status on component mount
+  // Check order acceptance status on component mount and listen for changes
   useEffect(() => {
     const checkOrderStatus = () => {
       const takingOrders = localStorage.getItem('besos_taking_orders');
@@ -127,13 +133,25 @@ export default function Example() {
     
     checkOrderStatus();
     
-    // Check every 30 seconds for status changes
-    const interval = setInterval(checkOrderStatus, 30000);
+    // Listen for storage changes (when admin toggles from another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'besos_taking_orders') {
+        checkOrderStatus();
+      }
+    };
     
-    return () => clearInterval(interval);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Check every 10 seconds for status changes (more frequent for better UX)
+    const interval = setInterval(checkOrderStatus, 10000);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
-  // Fetch booked time slots
+  // Fetch booked time slots with counts
   useEffect(() => {
     const fetchBookedSlots = async () => {
       try {
@@ -148,8 +166,8 @@ export default function Example() {
           return;
         }
         
-        // Convert pickup times to slot keys (YYYY-MM-DD HH:MM format)
-        const slots = new Set<string>();
+        // Count bookings per slot (allow up to 2 per slot)
+        const slotCounts = new Map<string, number>();
         data?.forEach(order => {
           if (order.pickup_time) {
             const date = new Date(order.pickup_time);
@@ -159,12 +177,21 @@ export default function Example() {
             date.setMinutes(normalizedMinutes, 0, 0);
             
             const slotKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            slots.add(slotKey);
+            slotCounts.set(slotKey, (slotCounts.get(slotKey) || 0) + 1);
           }
         });
         
-        console.log('📊 Loaded booked slots:', Array.from(slots));
-        setBookedSlots(slots);
+        // Convert to Set of fully booked slots (2 bookings)
+        const fullyBookedSlots = new Set<string>();
+        slotCounts.forEach((count, slotKey) => {
+          if (count >= 2) {
+            fullyBookedSlots.add(slotKey);
+          }
+        });
+        
+        console.log('📊 Loaded slot counts:', Object.fromEntries(slotCounts));
+        console.log('📊 Fully booked slots (2+ bookings):', Array.from(fullyBookedSlots));
+        setBookedSlots(fullyBookedSlots);
       } catch (error) {
         console.error('Error fetching booked slots:', error);
       }
@@ -178,7 +205,7 @@ export default function Example() {
     }
   }, [isTakingOrders]);
 
-  // Check if a time slot is available
+  // Check if a time slot is available (allows up to 2 bookings per slot)
   const isSlotAvailable = (date: Date) => {
     // Normalize to 5-minute intervals
     const minutes = date.getMinutes();
@@ -188,6 +215,7 @@ export default function Example() {
     
     const slotKey = `${normalizedDate.getFullYear()}-${String(normalizedDate.getMonth() + 1).padStart(2, '0')}-${String(normalizedDate.getDate()).padStart(2, '0')} ${String(normalizedDate.getHours()).padStart(2, '0')}:${String(normalizedDate.getMinutes()).padStart(2, '0')}`;
     
+    // Slot is available if it's not in the fully booked slots (2+ bookings)
     return !bookedSlots.has(slotKey);
   };
 
@@ -269,6 +297,13 @@ export default function Example() {
     const extraShots = currentCoffee.extras.filter(extra => extra.startsWith('Extra Shot')).length
     total += extraShots * EXTRA_PRICES['Extra Shot']
     
+    // Add bakery items pricing
+    const vanillaConchas = currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length
+    total += vanillaConchas * BAKERY_PRICES['Vanilla Mini Concha']
+    
+    const chocolateConchas = currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length
+    total += chocolateConchas * BAKERY_PRICES['Chocolate Mini Concha']
+    
     // Add other extras
     currentCoffee.extras.forEach(extra => {
       if (extra === 'Extra Drizzle') {
@@ -302,18 +337,47 @@ export default function Example() {
       return
     }
 
-    const newItem: OrderItem = {
+    // Separate coffee extras from bakery items
+    const coffeeExtras = currentCoffee.extras.filter(extra => 
+      !extra.startsWith('Vanilla Mini Concha') && !extra.startsWith('Chocolate Mini Concha')
+    )
+    
+    const bakeryItems = currentCoffee.extras.filter(extra => 
+      extra.startsWith('Vanilla Mini Concha') || extra.startsWith('Chocolate Mini Concha')
+    )
+
+    // Add the coffee item
+    const coffeeItem: OrderItem = {
       id: Date.now(),
       coffee_type: currentCoffee.coffee,
       size: currentCoffee.size,
       milk: currentCoffee.milk,
-      extras: currentCoffee.extras,
+      extras: coffeeExtras,
       price: calculateCurrentPrice() / currentCoffee.quantity, // Price per item
       quantity: currentCoffee.quantity,
       notes: currentCoffee.notes
     }
+    addItem(coffeeItem)
 
-    addItem(newItem)
+    // Add bakery items as separate items
+    const bakeryCounts: { [key: string]: number } = {}
+    bakeryItems.forEach(item => {
+      bakeryCounts[item] = (bakeryCounts[item] || 0) + 1
+    })
+
+    Object.entries(bakeryCounts).forEach(([bakeryItem, count]) => {
+      const bakeryOrderItem: OrderItem = {
+        id: Date.now() + Math.random(), // Ensure unique ID
+        coffee_type: bakeryItem,
+        size: 'N/A',
+        milk: 'N/A',
+        extras: [],
+        price: BAKERY_PRICES[bakeryItem as keyof typeof BAKERY_PRICES],
+        quantity: count,
+        notes: ''
+      }
+      addItem(bakeryOrderItem)
+    })
     
     // Reset form and clear validation errors
     setCurrentCoffee({
@@ -337,6 +401,12 @@ export default function Example() {
   // Helper function to calculate price breakdown
   const getPriceBreakdown = (item: OrderItem) => {
     const breakdown = []
+    
+    // Check if it's a bakery item
+    if (BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES]) {
+      breakdown.push(`${item.coffee_type}: $${BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES].toFixed(2)}`)
+      return breakdown;
+    }
     
     // Base price
     const basePrice = SIZE_PRICES[item.size as keyof typeof SIZE_PRICES] || 0
@@ -363,6 +433,18 @@ export default function Example() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check if orders are being accepted before processing
+    const takingOrders = localStorage.getItem('besos_taking_orders');
+    const isCurrentlyTakingOrders = takingOrders !== null ? takingOrders === 'true' : true;
+    
+    if (!isCurrentlyTakingOrders) {
+      // Show alert and redirect to closed message if not taking orders
+      alert('Sorry, we are not currently accepting orders. Please check back later.');
+      window.location.href = '/';
+      return;
+    }
+    
     updateCustomerName()
     updateOrderTotal()
     
@@ -775,7 +857,7 @@ export default function Example() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
                     Size (Tamaño)
-              </label>
+                </label>
                   <div className="mt-2 grid grid-cols-1">
                     <select 
                       value={currentCoffee.size}
@@ -805,7 +887,7 @@ export default function Example() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
                     Milk Type (Tipo de Leche)
-              </label>
+                </label>
                   <div className="mt-2 grid grid-cols-1">
                     <select 
                       value={currentCoffee.milk}
@@ -823,18 +905,18 @@ export default function Example() {
                     <ChevronDownIcon
                       aria-hidden="true"
                       className="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4 dark:text-gray-400"
-                />
+                  />
+                </div>
+                {validationErrors.milk && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.milk}</p>
+                )}
               </div>
-              {validationErrors.milk && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.milk}</p>
-              )}
-            </div>
 
                 {/* Extras */}
-            <div className="sm:col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
                     Extras (Extras)
-              </label>
+                </label>
                   <div className="mt-2 space-y-2">
                     {/* Extra Shot with Plus Icon */}
                     <div className="flex items-center justify-between">
@@ -908,10 +990,88 @@ export default function Example() {
                   </div>
                 </div>
 
+                {/* Bakery Section */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
+                    Bakery (Panadería)
+                  </label>
+                  <div className="mt-2 space-y-2">
+                    {/* Vanilla Mini Concha */}
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha'))}
+                          onChange={() => {
+                            const hasVanilla = currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha'))
+                            if (hasVanilla) {
+                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Vanilla Mini Concha'))
+                              updateCurrentCoffee('extras', newExtras)
+                            } else {
+                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Vanilla Mini Concha'])
+                            }
+                          }}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-400 dark:bg-gray-100 dark:focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-900 dark:text-gray-800">
+                          Vanilla Mini Concha (+$2)
+                          {currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length > 1 && 
+                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length}`
+                          }
+                        </span>
+                      </label>
+                      {currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha')) && (
+                        <button
+                          type="button"
+                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Vanilla Mini Concha'])}
+                          className="ml-2 p-1 rounded-full bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800"
+                        >
+                          <PlusIcon className="size-3 text-indigo-600 dark:text-indigo-400" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Chocolate Mini Concha */}
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha'))}
+                          onChange={() => {
+                            const hasChocolate = currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha'))
+                            if (hasChocolate) {
+                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Chocolate Mini Concha'))
+                              updateCurrentCoffee('extras', newExtras)
+                            } else {
+                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Chocolate Mini Concha'])
+                            }
+                          }}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-400 dark:bg-gray-100 dark:focus:ring-indigo-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-900 dark:text-gray-800">
+                          Chocolate Mini Concha (+$2)
+                          {currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length > 1 && 
+                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length}`
+                          }
+                        </span>
+                      </label>
+                      {currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha')) && (
+                        <button
+                          type="button"
+                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Chocolate Mini Concha'])}
+                          className="ml-2 p-1 rounded-full bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800"
+                        >
+                          <PlusIcon className="size-3 text-indigo-600 dark:text-indigo-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Quantity */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Quantity (Cantidad)
+                    Coffee Quantity (Cantidad de Café)
                     </label>
                   <div className="mt-2">
                     <input
@@ -927,7 +1087,11 @@ export default function Example() {
                       className={`block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white dark:text-gray-800 dark:outline-gray-300 dark:focus:outline-indigo-500 ${
                         validationErrors.quantity ? 'border-red-500 outline-red-500' : ''
                       }`}
+                      placeholder="1"
                     />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      How many of this coffee drink would you like? (Bakery items are added separately above)
+                    </p>
                     {validationErrors.quantity && (
                       <p className="mt-1 text-sm text-red-600">{validationErrors.quantity}</p>
                     )}
@@ -988,7 +1152,7 @@ export default function Example() {
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900 dark:text-gray-800">{item.coffee_type}</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-600">
-                        {item.size} • {item.milk}
+                        {item.size !== 'N/A' && `${item.size} • `}{item.milk !== 'N/A' && `${item.milk}`}
                         {item.extras.length > 0 && ` • ${item.extras.join(', ')}`}
                         {item.notes && ` • ${item.notes}`}
                       </p>
@@ -1075,9 +1239,6 @@ export default function Example() {
                     )}
                     <p className="mt-2 text-xs text-gray-500">
                       ⏰ Pickup times are available from 7:00 AM to 5:00 PM in 5-minute intervals (Horas de recogida disponibles de 7:00 AM a 5:00 PM en intervalos de 5 minutos)
-                      <br />
-                      📅 Booked time slots are automatically unavailable (Las franjas horarias reservadas no están disponibles automáticamente)
-                      <br />
                       🚫 Past dates and times cannot be selected (No se pueden seleccionar fechas y horas pasadas)
                     </p>
                 </div>

@@ -227,7 +227,7 @@ export default function ConfirmationPage() {
               </p>
               <p className="text-sm text-gray-700">
               Once you get there, go into the alley beside the building and make a left.
-              You'll see our pickup area in front of the garage, under a black tent — that's where we'll meet you. (Una vez que llegues, ve por el callejón al lado del edificio y gira a la izquierda. Verás nuestra área de recogida frente al garaje, bajo una carpa negra — ahí es donde nos encontraremos.)
+              You'll see our pickup area in front of the garage, next to orange cones  — that's where we'll meet you. (Una vez que llegues, ve por el callejón al lado del edificio y gira a la izquierda. Verás nuestra área de recogida frente al garaje, alado de los conos naranjas  — ahí es donde nos encontraremos.)
               </p>
             </div>
           </div>
