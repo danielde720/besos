@@ -812,11 +812,43 @@ function AdminPage() {
   } | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [isTakingOrders, setIsTakingOrders] = useState(() => {
-    // Initialize from localStorage, default to true if not set
+    // Initialize from localStorage as fallback, default to true if not set
     const stored = localStorage.getItem('besos_taking_orders');
     return stored !== null ? stored === 'true' : true;
   });
   const [updatingOrderStatus, setUpdatingOrderStatus] = useState(false);
+  
+  // Fetch order acceptance status from database
+  useEffect(() => {
+    const fetchOrderStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'taking_orders')
+          .single();
+        
+        if (error) throw error;
+        
+        const isAccepting = data?.value === 'true';
+        setIsTakingOrders(isAccepting);
+        
+        // Sync with localStorage for client-side checks
+        localStorage.setItem('besos_taking_orders', isAccepting.toString());
+        
+        console.log('📊 Order status from database:', isAccepting);
+      } catch (error) {
+        console.error('Error fetching order status:', error);
+        // Fallback to localStorage if database fails
+        const stored = localStorage.getItem('besos_taking_orders');
+        if (stored !== null) {
+          setIsTakingOrders(stored === 'true');
+        }
+      }
+    };
+    
+    fetchOrderStatus();
+  }, []);
   
   // Pagination state for historical orders
   const [currentPage, setCurrentPage] = useState(1);
@@ -852,15 +884,48 @@ function AdminPage() {
     setUpdatingOrderStatus(true);
     try {
       const newStatus = !isTakingOrders;
-      // Store in localStorage for now (you can move this to a database table later)
-      localStorage.setItem('besos_taking_orders', newStatus.toString());
+      console.log('🔄 Admin toggling order status:', { from: isTakingOrders, to: newStatus });
+      
+      // Check authentication first
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session) {
+        console.error('Authentication error:', authError);
+        alert('Authentication required to update order status');
+        return;
+      }
+      
+      console.log('Admin authenticated, proceeding with update...');
+      
+      // Update database first - use simple update since record already exists
+      const { data, error } = await supabase
+        .from('settings')
+        .update({ 
+          value: newStatus.toString()
+        })
+        .eq('key', 'taking_orders')
+        .select();
+      
+      console.log('Database update result:', { data, error });
+      
+      if (error) {
+        console.error('Database update error details:', error);
+        throw error;
+      }
+      
+      // Update local state
       setIsTakingOrders(newStatus);
       
-      // Optional: You can also store this in a Supabase table for persistence across devices
-      // const { error } = await supabase
-      //   .from('settings')
-      //   .upsert({ key: 'taking_orders', value: newStatus });
-      // if (error) throw error;
+      // Sync with localStorage for client-side checks
+      localStorage.setItem('besos_taking_orders', newStatus.toString());
+      
+      // Force a storage event to notify other tabs
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'besos_taking_orders',
+        newValue: newStatus.toString(),
+        oldValue: isTakingOrders.toString()
+      }));
+      
+      console.log('✅ Order status updated successfully in database');
       
     } catch (error) {
       console.error('Error updating order status:', error);

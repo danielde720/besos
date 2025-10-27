@@ -123,10 +123,42 @@ export default function Example() {
 
   // Check order acceptance status on component mount and listen for changes
   useEffect(() => {
-    const checkOrderStatus = () => {
-      const takingOrders = localStorage.getItem('besos_taking_orders');
-      if (takingOrders !== null) {
-        setIsTakingOrders(takingOrders === 'true');
+    const checkOrderStatus = async () => {
+      try {
+        // First try to get from database
+        const { data, error } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'taking_orders')
+          .single();
+        
+        if (!error && data) {
+          const newStatus = data.value === 'true';
+          console.log('📊 Order status from database:', newStatus);
+          setIsTakingOrders(newStatus);
+          localStorage.setItem('besos_taking_orders', newStatus.toString());
+        } else {
+          // Fallback to localStorage if database fails
+          const takingOrders = localStorage.getItem('besos_taking_orders');
+          console.log('🔄 Checking order status from localStorage:', takingOrders);
+          
+          if (takingOrders !== null) {
+            const newStatus = takingOrders === 'true';
+            console.log('📊 Order status update:', { from: isTakingOrders, to: newStatus });
+            setIsTakingOrders(newStatus);
+          } else {
+            // Default to true if not set (first time)
+            console.log('📊 No order status found, defaulting to true');
+            setIsTakingOrders(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking order status:', error);
+        // Fallback to localStorage
+        const takingOrders = localStorage.getItem('besos_taking_orders');
+        if (takingOrders !== null) {
+          setIsTakingOrders(takingOrders === 'true');
+        }
       }
       setCheckingOrderStatus(false);
     };
@@ -136,14 +168,15 @@ export default function Example() {
     // Listen for storage changes (when admin toggles from another tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'besos_taking_orders') {
+        console.log('🔄 Storage change detected:', e.newValue);
         checkOrderStatus();
       }
     };
     
     window.addEventListener('storage', handleStorageChange);
     
-    // Check every 10 seconds for status changes (more frequent for better UX)
-    const interval = setInterval(checkOrderStatus, 10000);
+    // Check every 5 seconds for status changes (more frequent for better UX)
+    const interval = setInterval(checkOrderStatus, 5000);
     
     return () => {
       clearInterval(interval);
