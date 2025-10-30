@@ -51,8 +51,8 @@ export const MENU_CATEGORIES = {
 
 export const SIZE_OPTIONS = [ 'Regular (16oz)', 'Large (24oz)']
 export const MILK_OPTIONS = ['Whole Milk', 'Oat Milk', 'Almond Milk', 'Coconut Milk']
-export const EXTRA_OPTIONS = [ 'Hot', 'Iced' ]
-export const BAKERY_OPTIONS = ['Vanilla Mini Concha', 'Chocolate Mini Concha']
+export const EXTRA_OPTIONS = [ 'Hot', 'Iced', 'Decaf' ]
+export const COMPLIMENTARY_OPTIONS = ['Pup Cup/Meow Cup', 'Kids Cup']
 
 // Pricing
 export const SIZE_PRICES = {
@@ -60,9 +60,9 @@ export const SIZE_PRICES = {
   'Large (24oz)': 9
 }
 
-export const BAKERY_PRICES = {
-  'Vanilla Mini Concha': 2,
-  'Chocolate Mini Concha': 2
+export const COMPLIMENTARY_PRICES = {
+  'Pup Cup/Meow Cup': 0,
+  'Kids Cup': 0
 }
 
 export const EXTRA_PRICES = {
@@ -330,12 +330,12 @@ export default function Example() {
     const extraShots = currentCoffee.extras.filter(extra => extra.startsWith('Extra Shot')).length
     total += extraShots * EXTRA_PRICES['Extra Shot']
     
-    // Add bakery items pricing
-    const vanillaConchas = currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length
-    total += vanillaConchas * BAKERY_PRICES['Vanilla Mini Concha']
+    // Add complimentary items pricing (these are free, but included for consistency)
+    const pupCups = currentCoffee.extras.filter(extra => extra.startsWith('Pup Cup/Meow Cup')).length
+    total += pupCups * COMPLIMENTARY_PRICES['Pup Cup/Meow Cup'] // Free
     
-    const chocolateConchas = currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length
-    total += chocolateConchas * BAKERY_PRICES['Chocolate Mini Concha']
+    const kidsCups = currentCoffee.extras.filter(extra => extra.startsWith('Kids Cup')).length
+    total += kidsCups * COMPLIMENTARY_PRICES['Kids Cup'] // Free
     
     // Add other extras
     currentCoffee.extras.forEach(extra => {
@@ -370,13 +370,13 @@ export default function Example() {
       return
     }
 
-    // Separate coffee extras from bakery items
+    // Separate coffee extras from complimentary items
     const coffeeExtras = currentCoffee.extras.filter(extra => 
-      !extra.startsWith('Vanilla Mini Concha') && !extra.startsWith('Chocolate Mini Concha')
+      !extra.startsWith('Pup Cup/Meow Cup') && !extra.startsWith('Kids Cup')
     )
     
-    const bakeryItems = currentCoffee.extras.filter(extra => 
-      extra.startsWith('Vanilla Mini Concha') || extra.startsWith('Chocolate Mini Concha')
+    const complimentaryItems = currentCoffee.extras.filter(extra => 
+      extra.startsWith('Pup Cup/Meow Cup') || extra.startsWith('Kids Cup')
     )
 
     // Add the coffee item
@@ -392,24 +392,24 @@ export default function Example() {
     }
     addItem(coffeeItem)
 
-    // Add bakery items as separate items
-    const bakeryCounts: { [key: string]: number } = {}
-    bakeryItems.forEach(item => {
-      bakeryCounts[item] = (bakeryCounts[item] || 0) + 1
+    // Add complimentary items as separate items (free)
+    const complimentaryCounts: { [key: string]: number } = {}
+    complimentaryItems.forEach(item => {
+      complimentaryCounts[item] = (complimentaryCounts[item] || 0) + 1
     })
 
-    Object.entries(bakeryCounts).forEach(([bakeryItem, count]) => {
-      const bakeryOrderItem: OrderItem = {
+    Object.entries(complimentaryCounts).forEach(([complimentaryItem, count]) => {
+      const complimentaryOrderItem: OrderItem = {
         id: Date.now() + Math.random(), // Ensure unique ID
-        coffee_type: bakeryItem,
+        coffee_type: complimentaryItem,
         size: 'N/A',
         milk: 'N/A',
         extras: [],
-        price: BAKERY_PRICES[bakeryItem as keyof typeof BAKERY_PRICES],
+        price: COMPLIMENTARY_PRICES[complimentaryItem as keyof typeof COMPLIMENTARY_PRICES],
         quantity: count,
         notes: ''
       }
-      addItem(bakeryOrderItem)
+      addItem(complimentaryOrderItem)
     })
     
     // Reset form and clear validation errors
@@ -435,9 +435,9 @@ export default function Example() {
   const getPriceBreakdown = (item: OrderItem) => {
     const breakdown = []
     
-    // Check if it's a bakery item
-    if (BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES]) {
-      breakdown.push(`${item.coffee_type}: $${BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES].toFixed(2)}`)
+    // Check if it's a complimentary item
+    if (COMPLIMENTARY_PRICES[item.coffee_type as keyof typeof COMPLIMENTARY_PRICES] !== undefined) {
+      breakdown.push(`${item.coffee_type}: Free`)
       return breakdown;
     }
     
@@ -1023,40 +1023,40 @@ export default function Example() {
                   </div>
                 </div>
 
-                {/* Bakery Section */}
+                {/* Complimentary Cups Section */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm/6 font-medium text-gray-900 dark:text-gray-800">
-                    Bakery (Panadería)
+                    Complimentary Cups (Tazas de Cortesía)
                   </label>
                   <div className="mt-2 space-y-2">
-                    {/* Vanilla Mini Concha */}
+                    {/* Pup Cup/Meow Cup */}
                     <div className="flex items-center justify-between">
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha'))}
+                          checked={currentCoffee.extras.some(extra => extra.startsWith('Pup Cup/Meow Cup'))}
                           onChange={() => {
-                            const hasVanilla = currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha'))
-                            if (hasVanilla) {
-                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Vanilla Mini Concha'))
+                            const hasPupCup = currentCoffee.extras.some(extra => extra.startsWith('Pup Cup/Meow Cup'))
+                            if (hasPupCup) {
+                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Pup Cup/Meow Cup'))
                               updateCurrentCoffee('extras', newExtras)
                             } else {
-                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Vanilla Mini Concha'])
+                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Pup Cup/Meow Cup'])
                             }
                           }}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-400 dark:bg-gray-100 dark:focus:ring-indigo-500"
                         />
                         <span className="ml-2 text-sm text-gray-900 dark:text-gray-800">
-                          Vanilla Mini Concha (+$2)
-                          {currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length > 1 && 
-                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Vanilla Mini Concha')).length}`
+                          Pup Cup/Meow Cup (Free)
+                          {currentCoffee.extras.filter(extra => extra.startsWith('Pup Cup/Meow Cup')).length > 1 && 
+                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Pup Cup/Meow Cup')).length}`
                           }
                         </span>
                       </label>
-                      {currentCoffee.extras.some(extra => extra.startsWith('Vanilla Mini Concha')) && (
+                      {currentCoffee.extras.some(extra => extra.startsWith('Pup Cup/Meow Cup')) && (
                         <button
                           type="button"
-                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Vanilla Mini Concha'])}
+                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Pup Cup/Meow Cup'])}
                           className="ml-2 p-1 rounded-full bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800"
                         >
                           <PlusIcon className="size-3 text-indigo-600 dark:text-indigo-400" />
@@ -1064,34 +1064,34 @@ export default function Example() {
                       )}
                     </div>
                     
-                    {/* Chocolate Mini Concha */}
+                    {/* Kids Cup */}
                     <div className="flex items-center justify-between">
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha'))}
+                          checked={currentCoffee.extras.some(extra => extra.startsWith('Kids Cup'))}
                           onChange={() => {
-                            const hasChocolate = currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha'))
-                            if (hasChocolate) {
-                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Chocolate Mini Concha'))
+                            const hasKidsCup = currentCoffee.extras.some(extra => extra.startsWith('Kids Cup'))
+                            if (hasKidsCup) {
+                              const newExtras = currentCoffee.extras.filter(extra => !extra.startsWith('Kids Cup'))
                               updateCurrentCoffee('extras', newExtras)
                             } else {
-                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Chocolate Mini Concha'])
+                              updateCurrentCoffee('extras', [...currentCoffee.extras, 'Kids Cup'])
                             }
                           }}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-400 dark:bg-gray-100 dark:focus:ring-indigo-500"
                         />
                         <span className="ml-2 text-sm text-gray-900 dark:text-gray-800">
-                          Chocolate Mini Concha (+$2)
-                          {currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length > 1 && 
-                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Chocolate Mini Concha')).length}`
+                          Kids Cup (Free)
+                          {currentCoffee.extras.filter(extra => extra.startsWith('Kids Cup')).length > 1 && 
+                            ` x${currentCoffee.extras.filter(extra => extra.startsWith('Kids Cup')).length}`
                           }
                         </span>
                       </label>
-                      {currentCoffee.extras.some(extra => extra.startsWith('Chocolate Mini Concha')) && (
+                      {currentCoffee.extras.some(extra => extra.startsWith('Kids Cup')) && (
                         <button
                           type="button"
-                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Chocolate Mini Concha'])}
+                          onClick={() => updateCurrentCoffee('extras', [...currentCoffee.extras, 'Kids Cup'])}
                           className="ml-2 p-1 rounded-full bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800"
                         >
                           <PlusIcon className="size-3 text-indigo-600 dark:text-indigo-400" />
@@ -1123,7 +1123,7 @@ export default function Example() {
                       placeholder="1"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      How many of this coffee drink would you like? (Bakery items are added separately above)
+                      How many of this coffee drink would you like? (Complimentary cups are added separately above)
                     </p>
                     {validationErrors.quantity && (
                       <p className="mt-1 text-sm text-red-600">{validationErrors.quantity}</p>
@@ -1241,7 +1241,14 @@ export default function Example() {
                       timeIntervals={5}
                       timeFormat="h:mm aa"
                       dateFormat="MMMM d, yyyy h:mm aa"
-                      minTime={new Date(new Date().setHours(7, 0, 0, 0))}
+                      minTime={(() => {
+                        // Check if selected date is Thursday (day 4)
+                        const checkDate = selectedDateTime || new Date();
+                        const dayOfWeek = checkDate.getDay(); // 0 = Sunday, 4 = Thursday
+                        // Thursday uses 10am, other days use 7am
+                        const minHour = dayOfWeek === 4 ? 10 : 7;
+                        return new Date(new Date().setHours(minHour, 0, 0, 0));
+                      })()}
                       maxTime={new Date(new Date().setHours(17, 0, 0, 0))}
                       filterDate={(date) => {
                         // Only allow today and future dates
@@ -1257,13 +1264,30 @@ export default function Example() {
                           return false;
                         }
                         
+                        // Check day-specific hours
+                        const dayOfWeek = time.getDay(); // 0 = Sunday, 4 = Thursday
+                        const hour = time.getHours();
+                        
+                        // Thursday: 10am-5pm, Other days: 7am-5pm
+                        if (dayOfWeek === 4) {
+                          // Thursday - must be 10am or later
+                          if (hour < 10) {
+                            return false;
+                          }
+                        } else {
+                          // Other days - must be 7am or later
+                          if (hour < 7) {
+                            return false;
+                          }
+                        }
+                        
                         // Then check slot availability
                         return isSlotAvailable(time);
                       }}
                       className={`w-full rounded-md bg-white px-3 py-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white dark:text-gray-800 dark:outline-gray-300 dark:focus:outline-indigo-500 ${
                         validationErrors.pickupTime ? 'border-red-500 outline-red-500' : ''
                       }`}
-                      placeholderText="Select pickup date and time * (7am-5pm, 5-minute intervals)"
+                      placeholderText="Select pickup date and time * (7am-5pm, Thursdays: 10am-5pm)"
                       isClearable={true}
                       required
                     />
@@ -1271,7 +1295,8 @@ export default function Example() {
                       <p className="mt-1 text-sm text-red-600">{validationErrors.pickupTime}</p>
                     )}
                     <p className="mt-2 text-xs text-gray-500">
-                      ⏰ Pickup times are available from 7:00 AM to 5:00 PM in 5-minute intervals (Horas de recogida disponibles de 7:00 AM a 5:00 PM en intervalos de 5 minutos)
+                      ⏰ Pickup times are available from 7:00 AM to 5:00 PM in 5-minute intervals (Thursdays: 10:00 AM to 5:00 PM)
+                      <br />
                       🚫 Past dates and times cannot be selected (No se pueden seleccionar fechas y horas pasadas)
                     </p>
                 </div>

@@ -10,7 +10,7 @@ import {
   EXTRA_OPTIONS, 
   SIZE_PRICES, 
   EXTRA_PRICES,
-  BAKERY_PRICES
+  COMPLIMENTARY_PRICES
 } from '../ordering/Form'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -91,9 +91,9 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
 
   // Calculate price for an item
   const calculateItemPrice = (item: any) => {
-    // Check if it's a bakery item
-    if (BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES]) {
-      return BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES];
+    // Check if it's a complimentary item
+    if (COMPLIMENTARY_PRICES[item.coffee_type as keyof typeof COMPLIMENTARY_PRICES] !== undefined) {
+      return COMPLIMENTARY_PRICES[item.coffee_type as keyof typeof COMPLIMENTARY_PRICES];
     }
     
     // Regular coffee pricing
@@ -314,7 +314,7 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
               </div>
 
               {/* Size and Milk Dropdowns - Only show for coffee items */}
-              {!BAKERY_PRICES[item.coffee_type as keyof typeof BAKERY_PRICES] && (
+              {COMPLIMENTARY_PRICES[item.coffee_type as keyof typeof COMPLIMENTARY_PRICES] === undefined && (
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
@@ -498,7 +498,7 @@ function EditOrderForm({ order, onSave, onCancel, isUpdating }: {
           </div>
 
           {/* Size and Milk Dropdowns - Only show for coffee items */}
-          {!BAKERY_PRICES[newItem.coffee_type as keyof typeof BAKERY_PRICES] && (
+          {COMPLIMENTARY_PRICES[newItem.coffee_type as keyof typeof COMPLIMENTARY_PRICES] === undefined && (
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
@@ -1021,8 +1021,8 @@ function AdminPage() {
           if (parsedOrder.id === pendingAction.orderId) {
             localStorage.removeItem('besos_order_confirmation')
             console.log('Cleared local storage for completed/cancelled order')
-          }
-        } catch (error) {
+      }
+    } catch (error) {
           console.error('Error checking stored order:', error)
         }
       }
@@ -1316,9 +1316,9 @@ function AdminPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Besos Dashboard</h1>
             <p className="mt-1 text-sm sm:text-base text-gray-600">
               {activeTab === 'current' ? 'Manage coffee orders in real-time' : 'View past completed and cancelled orders'}
-            </p>
-          </div>
-          
+        </p>
+      </div>
+
           {/* Order Status Toggle */}
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
             <span className="text-sm font-medium text-gray-700">
