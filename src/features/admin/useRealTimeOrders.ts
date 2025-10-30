@@ -25,11 +25,17 @@ export const useRealTimeOrders = () => {
   useEffect(() => {
     console.log("Setting up real-time subscription for orders...");
     
+    // Use a unique channel name to avoid conflicts
+    const channelName = `orders-realtime-${Date.now()}`;
     const channel = supabase
-      .channel("orders-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "orders"
+        },
         (payload) => {
           console.log("Realtime event:", payload);
 
@@ -76,17 +82,18 @@ export const useRealTimeOrders = () => {
         console.log("Real-time subscription status:", status);
         if (status === 'SUBSCRIBED') {
           console.log("✅ Successfully subscribed to orders real-time updates");
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error("❌ Error subscribing to orders real-time updates");
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error("❌ Error subscribing to orders real-time updates:", status);
         }
       });
 
     // 3️⃣ Cleanup on unmount
     return () => {
       console.log("Cleaning up real-time subscription...");
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, []); // Empty dependency array - queryClient is stable from React Query
 
   return { data, isLoading, error };
 };
